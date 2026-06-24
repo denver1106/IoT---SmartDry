@@ -1,0 +1,59 @@
+{
+  "devices": {
+    "smartdry-01": {
+      "deviceId": "smartdry-01",
+      "status": "online",
+      "rackState": "stopped",
+      "lastSeenAt": "2026-06-24T00:00:00.000Z",
+      "wifiRSSI": -55
+    }
+  },
+  "accounts": {
+    "admin": {
+      "username": "admin",
+      "displayName": "SmartDry Admin",
+      "role": "admin",
+      "passwordHash": "replace-with-sha256-hash",
+      "createdAt": "2026-06-24T00:00:00.000Z",
+      "active": true
+    }
+  },
+  "sensor_logs": [
+    {
+      "kind": "environment",
+      "deviceId": "smartdry-01",
+      "temperature": 30.4,
+      "humidity": 66.5,
+      "heatIndex": 34.1,
+      "serverTime": "2026-06-24T00:01:00.000Z"
+    },
+    {
+      "kind": "rain",
+      "deviceId": "smartdry-01",
+      "raw": 1500,
+      "rainPercent": 78,
+      "isRaining": true,
+      "serverTime": "2026-06-24T00:02:00.000Z"
+    }
+  ],
+  "rack_events": [
+    {
+      "deviceId": "smartdry-01",
+      "action": "retract",
+      "requestedBy": "admin",
+      "source": "dashboard",
+      "serverTime": "2026-06-24T00:03:00.000Z"
+    }
+  ],
+  "alerts": [
+    {
+      "type": "rain",
+      "severity": "warning",
+      "message": "Phat hien mua. Nen thu sao phoi.",
+      "sentFcm": true,
+      "sentEmail": true,
+      "serverTime": "2026-06-24T00:04:00.000Z"
+    }
+  ]
+}
+

@@ -1,0 +1,882 @@
+[
+  {
+    "id": "tab_mqtt",
+    "type": "tab",
+    "label": "MQTT Broker (Chung)",
+    "disabled": false,
+    "info": "Aedes MQTT broker local cho ESP32 va Node-RED."
+  },
+  {
+    "id": "tab_basic_env",
+    "type": "tab",
+    "label": "Can ban 1 - Environment To Web (24127192)",
+    "disabled": false,
+    "info": "DHT22 -> ESP32 -> MQTT -> Node-RED -> Dashboard."
+  },
+  {
+    "id": "tab_basic_rack",
+    "type": "tab",
+    "label": "Can ban 2 - Rack Control (24127493)",
+    "disabled": false,
+    "info": "Dashboard -> MQTT -> ESP32 -> motor sao phoi."
+  },
+  {
+    "id": "tab_task2_rain",
+    "type": "tab",
+    "label": "Task 2 - Rain To Web (24127192)",
+    "disabled": false,
+    "info": "Rain sensor -> ESP32 -> MQTT -> Web frontend."
+  },
+  {
+    "id": "tab_alerts",
+    "type": "tab",
+    "label": "Task 6-7 - FCM and Email (24127192)",
+    "disabled": false,
+    "info": "Gui thong bao nhanh va email canh bao."
+  },
+  {
+    "id": "tab_auth",
+    "type": "tab",
+    "label": "Task 9 - Login Security (24127192)",
+    "disabled": false,
+    "info": "Dang nhap dashboard, tai khoan luu Firestore."
+  },
+  {
+    "id": "tab_task1_light",
+    "type": "tab",
+    "label": "Task 1 - LDR To LED (24127493)",
+    "disabled": false,
+    "info": "LDR -> LED local, Node-RED chi hien thi log."
+  },
+  {
+    "id": "tab_cloud",
+    "type": "tab",
+    "label": "Task 4-5 - Cloud Logs and Charts (24127493)",
+    "disabled": false,
+    "info": "Luu Firestore va doc lai de hien thi chart/gauge."
+  },
+  {
+    "id": "aedes_local",
+    "type": "aedes broker",
+    "z": "tab_mqtt",
+    "name": "SmartDry Local MQTT Broker",
+    "mqtt_port": 1883,
+    "mqtt_ws_port": "",
+    "cert": "",
+    "key": "",
+    "certname": "",
+    "keyname": "",
+    "dburl": "",
+    "usetls": false,
+    "x": 210,
+    "y": 120,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "env_mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_basic_env",
+    "name": "smartdry/sensor/environment",
+    "topic": "smartdry/sensor/environment",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 190,
+    "y": 100,
+    "wires": [
+      [
+        "env_json"
+      ]
+    ]
+  },
+  {
+    "id": "env_json",
+    "type": "json",
+    "z": "tab_basic_env",
+    "name": "Parse JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 410,
+    "y": 100,
+    "wires": [
+      [
+        "env_format_dashboard",
+        "env_cloud_link"
+      ]
+    ]
+  },
+  {
+    "id": "env_format_dashboard",
+    "type": "function",
+    "z": "tab_basic_env",
+    "name": "Format Environment For Dashboard",
+    "func": "// Can ban 1 - 24127192\n// Chuan hoa payload DHT de hien thi tren dashboard Node-RED.\nconst p = msg.payload || {};\nmsg.payload = {\n    temperature: Number(p.temperature),\n    humidity: Number(p.humidity),\n    heatIndex: Number(p.heatIndex),\n    label: `Nhiet do ${p.temperature} C - Do am ${p.humidity}%`,\n    deviceId: p.deviceId,\n    timestamp: p.timestamp\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 100,
+    "wires": [
+      [
+        "env_debug"
+      ]
+    ]
+  },
+  {
+    "id": "env_debug",
+    "type": "debug",
+    "z": "tab_basic_env",
+    "name": "Dashboard placeholder",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 960,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "env_cloud_link",
+    "type": "link out",
+    "z": "tab_basic_env",
+    "name": "Environment -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 620,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "rack_extend_btn",
+    "type": "inject",
+    "z": "tab_basic_rack",
+    "name": "Extend rack",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"action\":\"extend\",\"source\":\"dashboard\",\"requestedBy\":\"admin\"}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "rack_add_timestamp"
+      ]
+    ]
+  },
+  {
+    "id": "rack_retract_btn",
+    "type": "inject",
+    "z": "tab_basic_rack",
+    "name": "Retract rack",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"action\":\"retract\",\"source\":\"dashboard\",\"requestedBy\":\"admin\"}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 160,
+    "wires": [
+      [
+        "rack_add_timestamp"
+      ]
+    ]
+  },
+  {
+    "id": "rack_stop_btn",
+    "type": "inject",
+    "z": "tab_basic_rack",
+    "name": "Stop rack",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"action\":\"stop\",\"source\":\"dashboard\",\"requestedBy\":\"admin\"}",
+    "payloadType": "json",
+    "x": 140,
+    "y": 220,
+    "wires": [
+      [
+        "rack_add_timestamp"
+      ]
+    ]
+  },
+  {
+    "id": "rack_add_timestamp",
+    "type": "function",
+    "z": "tab_basic_rack",
+    "name": "Build Rack Command",
+    "func": "// Can ban 2 - 24127493\n// Tao lenh dieu khien sao phoi gui qua MQTT.\nmsg.payload.timestamp = Date.now();\nmsg.payload.requestId = `rack-${Date.now()}`;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 160,
+    "wires": [
+      [
+        "rack_mqtt_out",
+        "rack_cmd_cloud_link"
+      ]
+    ]
+  },
+  {
+    "id": "rack_mqtt_out",
+    "type": "mqtt out",
+    "z": "tab_basic_rack",
+    "name": "-> smartdry/rack/control",
+    "topic": "smartdry/rack/control",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_local",
+    "x": 680,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "rack_status_in",
+    "type": "mqtt in",
+    "z": "tab_basic_rack",
+    "name": "smartdry/rack/status",
+    "topic": "smartdry/rack/status",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 170,
+    "y": 320,
+    "wires": [
+      [
+        "rack_status_json"
+      ]
+    ]
+  },
+  {
+    "id": "rack_status_json",
+    "type": "json",
+    "z": "tab_basic_rack",
+    "name": "Parse Rack Status",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 400,
+    "y": 320,
+    "wires": [
+      [
+        "rack_status_cloud_link",
+        "rack_status_debug"
+      ]
+    ]
+  },
+  {
+    "id": "rack_status_debug",
+    "type": "debug",
+    "z": "tab_basic_rack",
+    "name": "Rack status dashboard placeholder",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 710,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "rack_cmd_cloud_link",
+    "type": "link out",
+    "z": "tab_basic_rack",
+    "name": "Rack command -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 670,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "rack_status_cloud_link",
+    "type": "link out",
+    "z": "tab_basic_rack",
+    "name": "Rack status -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 670,
+    "y": 390,
+    "wires": []
+  },
+  {
+    "id": "rain_mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_task2_rain",
+    "name": "smartdry/sensor/rain",
+    "topic": "smartdry/sensor/rain",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 170,
+    "y": 120,
+    "wires": [
+      [
+        "rain_json"
+      ]
+    ]
+  },
+  {
+    "id": "rain_json",
+    "type": "json",
+    "z": "tab_task2_rain",
+    "name": "Parse Rain JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 390,
+    "y": 120,
+    "wires": [
+      [
+        "rain_format",
+        "rain_cloud_link"
+      ]
+    ]
+  },
+  {
+    "id": "rain_format",
+    "type": "function",
+    "z": "tab_task2_rain",
+    "name": "Rain Dashboard + Alert Router",
+    "func": "// Task 2 - 24127192\n// Hien thi rain sensor tren web va tao alert neu co mua.\nconst p = msg.payload || {};\nmsg.payload = {\n    type: 'rain',\n    severity: p.isRaining ? 'warning' : 'info',\n    message: p.isRaining ? `Phat hien mua (${p.rainPercent}%). Nen thu sao phoi.` : 'Khong mua.',\n    rainPercent: p.rainPercent,\n    isRaining: Boolean(p.isRaining),\n    deviceId: p.deviceId,\n    timestamp: p.timestamp\n};\nif (p.isRaining) {\n    return [msg, RED.util.cloneMessage(msg)];\n}\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 650,
+    "y": 120,
+    "wires": [
+      [
+        "rain_debug"
+      ],
+      [
+        "alert_link_out"
+      ]
+    ]
+  },
+  {
+    "id": "rain_debug",
+    "type": "debug",
+    "z": "tab_task2_rain",
+    "name": "Rain dashboard placeholder",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 950,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "alert_link_out",
+    "type": "link out",
+    "z": "tab_task2_rain",
+    "name": "Alert -> FCM/Email",
+    "mode": "link",
+    "links": [
+      "alert_link_in"
+    ],
+    "x": 910,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "rain_cloud_link",
+    "type": "link out",
+    "z": "tab_task2_rain",
+    "name": "Rain -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 630,
+    "y": 190,
+    "wires": []
+  },
+  {
+    "id": "alert_link_in",
+    "type": "link in",
+    "z": "tab_alerts",
+    "name": "Alert from Rain/Rack",
+    "links": [
+      "alert_link_out"
+    ],
+    "x": 120,
+    "y": 120,
+    "wires": [
+      [
+        "alert_build_fcm",
+        "alert_build_email",
+        "alert_cloud_link"
+      ]
+    ]
+  },
+  {
+    "id": "alert_build_fcm",
+    "type": "function",
+    "z": "tab_alerts",
+    "name": "Task 6 - Build FCM Payload",
+    "func": "// Task 6 - 24127192\n// Tao payload cho node FCM. Token/topic se cau hinh trong node FCM thuc te.\nconst alert = msg.payload || {};\nmsg.payload = {\n    notification: {\n        title: 'SmartDry canh bao',\n        body: alert.message || 'Co canh bao moi tu SmartDry'\n    },\n    data: {\n        type: String(alert.type || 'alert'),\n        severity: String(alert.severity || 'warning'),\n        deviceId: String(alert.deviceId || 'smartdry-01')\n    }\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 80,
+    "wires": [
+      [
+        "fcm_debug"
+      ]
+    ]
+  },
+  {
+    "id": "fcm_debug",
+    "type": "debug",
+    "z": "tab_alerts",
+    "name": "Replace with FCM node",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 640,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "alert_build_email",
+    "type": "function",
+    "z": "tab_alerts",
+    "name": "Task 7 - Build Email",
+    "func": "// Task 7 - 24127192\n// Tao email canh bao. Node email se dung msg.to, msg.topic, msg.payload.\nconst alert = msg.payload || {};\nmsg.to = 'receiver@example.com';\nmsg.topic = `[SmartDry] ${alert.severity || 'warning'} - ${alert.type || 'alert'}`;\nmsg.payload = `${alert.message || 'Co canh bao moi'}\\n\\nDevice: ${alert.deviceId || 'smartdry-01'}\\nTime: ${new Date().toLocaleString('vi-VN')}`;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 150,
+    "wires": [
+      [
+        "email_debug"
+      ]
+    ]
+  },
+  {
+    "id": "email_debug",
+    "type": "debug",
+    "z": "tab_alerts",
+    "name": "Replace with email node",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 630,
+    "y": 150,
+    "wires": []
+  },
+  {
+    "id": "alert_cloud_link",
+    "type": "link out",
+    "z": "tab_alerts",
+    "name": "Alert -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 350,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "login_inject",
+    "type": "inject",
+    "z": "tab_auth",
+    "name": "Demo login payload",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"username\":\"admin\",\"password\":\"admin123\"}",
+    "payloadType": "json",
+    "x": 170,
+    "y": 100,
+    "wires": [
+      [
+        "auth_hash"
+      ]
+    ]
+  },
+  {
+    "id": "auth_hash",
+    "type": "function",
+    "z": "tab_auth",
+    "name": "Task 9 - Hash/Login Skeleton",
+    "func": "// Task 9 - 24127192\n// Skeleton dang nhap. Trong ban hoan thien, doc accounts tu Firestore va so sanh passwordHash.\n// Node-RED Function mac dinh khong nen luu password plain text.\nconst user = msg.payload || {};\nif (!user.username || !user.password) {\n    msg.payload = { authenticated: false, reason: 'missing_credentials' };\n    return [null, msg];\n}\nmsg.accountQuery = {\n    collection: 'accounts',\n    field: 'username',\n    operator: '==',\n    value: user.username\n};\nmsg.passwordToVerify = user.password;\nmsg.payload = { username: user.username, next: 'query_firestore_accounts' };\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 100,
+    "wires": [
+      [
+        "auth_success_debug"
+      ],
+      [
+        "auth_fail_debug"
+      ]
+    ]
+  },
+  {
+    "id": "auth_success_debug",
+    "type": "debug",
+    "z": "tab_auth",
+    "name": "Replace with Firestore account query",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 760,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "auth_fail_debug",
+    "type": "debug",
+    "z": "tab_auth",
+    "name": "Login failed notification",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 740,
+    "y": 130,
+    "wires": []
+  },
+  {
+    "id": "light_mqtt_in",
+    "type": "mqtt in",
+    "z": "tab_task1_light",
+    "name": "smartdry/task1/light-led",
+    "topic": "smartdry/task1/light-led",
+    "qos": "0",
+    "datatype": "auto",
+    "broker": "mqtt_local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "x": 180,
+    "y": 110,
+    "wires": [
+      [
+        "light_json"
+      ]
+    ]
+  },
+  {
+    "id": "light_json",
+    "type": "json",
+    "z": "tab_task1_light",
+    "name": "Parse Light JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 420,
+    "y": 110,
+    "wires": [
+      [
+        "light_cloud_link",
+        "light_debug"
+      ]
+    ]
+  },
+  {
+    "id": "light_debug",
+    "type": "debug",
+    "z": "tab_task1_light",
+    "name": "Task 1 status dashboard placeholder",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 730,
+    "y": 110,
+    "wires": []
+  },
+  {
+    "id": "light_cloud_link",
+    "type": "link out",
+    "z": "tab_task1_light",
+    "name": "Light -> Cloud Log",
+    "mode": "link",
+    "links": [
+      "cloud_log_in"
+    ],
+    "x": 630,
+    "y": 170,
+    "wires": []
+  },
+  {
+    "id": "cloud_log_in",
+    "type": "link in",
+    "z": "tab_cloud",
+    "name": "All events -> Cloud Log",
+    "links": [
+      "env_cloud_link",
+      "rack_cmd_cloud_link",
+      "rack_status_cloud_link",
+      "rain_cloud_link",
+      "alert_cloud_link",
+      "light_cloud_link"
+    ],
+    "x": 80,
+    "y": 100,
+    "wires": [
+      [
+        "cloud_log_sensor"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_log_sensor",
+    "type": "function",
+    "z": "tab_cloud",
+    "name": "Task 4 - Log Sensor",
+    "func": "// Task 4 - 24127493\n// Chuan bi document ghi Firestore collection sensor_logs.\nconst p = msg.payload || {};\nmsg.collection = 'sensor_logs';\nmsg.payload = {\n    kind: p.isRaining === undefined ? 'environment' : 'rain',\n    ...p,\n    serverTime: new Date().toISOString()\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 210,
+    "y": 100,
+    "wires": [
+      [
+        "cloud_debug"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_log_rain",
+    "type": "link out",
+    "z": "tab_cloud",
+    "name": "Rain log placeholder",
+    "mode": "link",
+    "links": [],
+    "x": 205,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "cloud_log_rack_command",
+    "type": "link out",
+    "z": "tab_cloud",
+    "name": "Rack command log placeholder",
+    "mode": "link",
+    "links": [],
+    "x": 230,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "cloud_log_rack_status",
+    "type": "link out",
+    "z": "tab_cloud",
+    "name": "Rack status log placeholder",
+    "mode": "link",
+    "links": [],
+    "x": 225,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "cloud_log_light",
+    "type": "link out",
+    "z": "tab_cloud",
+    "name": "Light log placeholder",
+    "mode": "link",
+    "links": [],
+    "x": 205,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "cloud_log_alert",
+    "type": "link out",
+    "z": "tab_cloud",
+    "name": "Alert log placeholder",
+    "mode": "link",
+    "links": [],
+    "x": 205,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "cloud_chart_inject",
+    "type": "inject",
+    "z": "tab_cloud",
+    "name": "Refresh cloud charts",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "30",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"collection\":\"sensor_logs\",\"limit\":50}",
+    "payloadType": "json",
+    "x": 200,
+    "y": 500,
+    "wires": [
+      [
+        "cloud_chart_format"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_chart_format",
+    "type": "function",
+    "z": "tab_cloud",
+    "name": "Task 5 - Build Chart Dataset",
+    "func": "// Task 5 - 24127493\n// Sau khi thay debug bang Firestore read node, payload se la danh sach log.\n// Ham nay chuyen log thanh du lieu cho chart/gauge/table.\nconst rows = Array.isArray(msg.payload) ? msg.payload : [];\nmsg.payload = rows.map((row) => ({\n    x: row.serverTime || row.timestamp,\n    temperature: row.temperature,\n    humidity: row.humidity,\n    rainPercent: row.rainPercent\n}));\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 500,
+    "wires": [
+      [
+        "cloud_debug"
+      ]
+    ]
+  },
+  {
+    "id": "cloud_debug",
+    "type": "debug",
+    "z": "tab_cloud",
+    "name": "Replace with Firestore/dashboard nodes",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 810,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "mqtt_local",
+    "type": "mqtt-broker",
+    "name": "Local MQTT 1883",
+    "broker": "127.0.0.1",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

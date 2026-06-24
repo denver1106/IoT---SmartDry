@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartDry Notifications</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f4f7f8;
+      color: #172126;
+      padding: 24px;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    section {
+      background: white;
+      border: 1px solid #d8e1e5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    p { color: #5e7078; line-height: 1.5; }
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 16px;
+      background: #0d6b6f;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    code, pre {
+      background: #eef3f5;
+      border-radius: 6px;
+      padding: 3px 6px;
+    }
+    pre {
+      overflow: auto;
+      padding: 12px;
+      min-height: 72px;
+    }
+    .status {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #eaf3ff;
+      color: #164b7a;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>SmartDry Notifications</h1>
+      <p>Trang nay dung cho Task 6: nhan thong bao nhanh Firebase Cloud Messaging khi SmartDry phat hien mua hoac co canh bao he thong.</p>
+      <button id="enableBtn">Bat thong bao</button>
+      <div id="status" class="status">Chua kich hoat</div>
+    </section>
+
+    <section>
+      <h2>FCM registration token</h2>
+      <pre id="tokenBox">Token se hien thi sau khi cho phep notification.</pre>
+    </section>
+
+    <section>
+      <h2>Thong bao gan nhat</h2>
+      <pre id="messageBox">Chua co thong bao.</pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
+
+    // Thay bang Firebase Web Config cua nhom.
+    const firebaseConfig = {
+      apiKey: 'YOUR_API_KEY',
+      authDomain: 'YOUR_PROJECT.firebaseapp.com',
+      projectId: 'YOUR_PROJECT_ID',
+      storageBucket: 'YOUR_PROJECT.appspot.com',
+      messagingSenderId: 'YOUR_SENDER_ID',
+      appId: 'YOUR_APP_ID'
+    };
+
+    const vapidKey = 'YOUR_VAPID_KEY_HERE';
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    const enableBtn = document.getElementById('enableBtn');
+    const statusBox = document.getElementById('status');
+    const tokenBox = document.getElementById('tokenBox');
+    const messageBox = document.getElementById('messageBox');
+
+    enableBtn.addEventListener('click', async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          statusBox.textContent = 'Nguoi dung chua cho phep notification.';
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
+        tokenBox.textContent = token || 'Khong lay duoc token.';
+        statusBox.textContent = token ? 'Da san sang nhan thong bao.' : 'Chua co token.';
+      } catch (err) {
+        statusBox.textContent = 'Loi FCM: ' + err.message;
+      }
+    });
+
+    onMessage(messaging, (payload) => {
+      messageBox.textContent = JSON.stringify(payload, null, 2);
+    });
+  </script>
+</body>
+</html>
+
