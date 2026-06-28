@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartDry Node-RED Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f8;
+      --panel: #ffffff;
+      --line: #d7e0e4;
+      --text: #172126;
+      --muted: #60727b;
+      --primary: #0d6b6f;
+      --danger: #b42318;
+      --warn: #9a6700;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    h1 { margin: 0; font-size: 24px; }
+    main {
+      padding: 18px 24px 28px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 92px;
+    }
+    .metric strong { display: block; font-size: 28px; margin-top: 8px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    button, input {
+      min-height: 40px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    button {
+      border: 0;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: #e8eff1; color: var(--text); }
+    button.danger { background: var(--danger); }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .stack { display: grid; gap: 10px; }
+    pre {
+      max-height: 220px;
+      overflow: auto;
+      background: #eef3f5;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: 220px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdfe;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SmartDry Node-RED Dashboard</h1>
+      <div class="muted">ESP32 + MQTT + Firebase design</div>
+    </div>
+    <div id="userBox" class="muted">Chua dang nhap</div>
+  </header>
+  <main>
+    <section>
+      <h2>Dang nhap</h2>
+      <div class="stack">
+        <input id="username" value="admin" autocomplete="username">
+        <input id="password" type="password" value="admin123" autocomplete="current-password">
+        <button onclick="login()">Dang nhap</button>
+      </div>
+      <hr>
+      <h2>Dieu khien sao phoi</h2>
+      <div class="row">
+        <button onclick="rack('extend')">Keo ra</button>
+        <button onclick="rack('retract')">Thu vao</button>
+        <button class="danger" onclick="rack('stop')">Dung</button>
+      </div>
+      <p class="muted">Lenh nay di qua Node-RED -> MQTT -> ESP32 -> motor.</p>
+    </section>
+
+    <section>
+      <h2>Trang thai moi nhat</h2>
+      <div class="grid">
+        <div class="metric"><span>Nhiet do</span><strong id="temp">--</strong><span class="muted">DHT11/DHT22</span></div>
+        <div class="metric"><span>Do am</span><strong id="humidity">--</strong><span class="muted">DHT11/DHT22</span></div>
+        <div class="metric"><span>Mua</span><strong id="rain">--</strong><span class="muted">Rain sensor</span></div>
+        <div class="metric"><span>Anh sang</span><strong id="light">--</strong><span class="muted">Task 1 LDR -> LED</span></div>
+        <div class="metric"><span>Sao phoi</span><strong id="rack">--</strong><span class="muted">Motor status</span></div>
+        <div class="metric"><span>WiFi</span><strong id="wifi">--</strong><span class="muted">Task 12 monitor</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Bieu do moi truong</h2>
+      <canvas id="envChart" width="760" height="220"></canvas>
+    </section>
+
+    <section>
+      <h2>Log gan nhat</h2>
+      <pre id="logs">Dang tai...</pre>
+    </section>
+  </main>
+
+  <script>
+    async function login() {
+      const res = await fetch('/smartdry/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value
+        })
+      });
+      const data = await res.json();
+      alert(data.ok ? 'Dang nhap thanh cong' : 'Dang nhap that bai');
+      await refresh();
+    }
+
+    async function rack(action) {
+      const res = await fetch('/smartdry/api/rack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (!data.ok) alert(data.message || data.error || 'Khong gui duoc lenh');
+      await refresh();
+    }
+
+    function drawChart(rows) {
+      const canvas = document.getElementById('envChart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#d7e0e4';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const y = 20 + i * 40;
+        ctx.beginPath();
+        ctx.moveTo(30, y);
+        ctx.lineTo(canvas.width - 20, y);
+        ctx.stroke();
+      }
+      if (!rows.length) {
+        ctx.fillStyle = '#60727b';
+        ctx.fillText('Chua co du lieu', 32, 112);
+        return;
+      }
+      const maxTemp = Math.max(...rows.map(r => r.temperature || 0), 40);
+      const points = rows.map((r, i) => ({
+        x: 30 + i * ((canvas.width - 60) / Math.max(rows.length - 1, 1)),
+        y: canvas.height - 25 - ((r.temperature || 0) / maxTemp) * (canvas.height - 50)
+      }));
+      ctx.strokeStyle = '#0d6b6f';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+      ctx.stroke();
+      ctx.fillStyle = '#0d6b6f';
+      ctx.fillText('Nhiet do', 32, 24);
+    }
+
+    async function refresh() {
+      const res = await fetch('/smartdry/api/status');
+      const data = await res.json();
+      const latest = data.latest || {};
+      document.getElementById('userBox').textContent = latest.user ? `Dang nhap: ${latest.user.username}` : 'Chua dang nhap';
+      document.getElementById('temp').textContent = latest.environment ? `${latest.environment.temperature} C` : '--';
+      document.getElementById('humidity').textContent = latest.environment ? `${latest.environment.humidity}%` : '--';
+      document.getElementById('rain').textContent = latest.rain ? `${latest.rain.rainPercent}%` : '--';
+      document.getElementById('light').textContent = latest.light ? (latest.light.ledOn ? 'LED ON' : 'LED OFF') : '--';
+      document.getElementById('rack').textContent = latest.rack ? latest.rack.state : '--';
+      document.getElementById('wifi').textContent = latest.wifi ? `${latest.wifi.status}` : '--';
+      drawChart((data.charts && data.charts.environment) || []);
+      document.getElementById('logs').textContent = JSON.stringify(data.recent || {}, null, 2);
+    }
+
+    refresh();
+    setInterval(refresh, 3000);
+  </script>
+</body>
+</html>
+
