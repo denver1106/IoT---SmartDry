@@ -1,0 +1,19 @@
+{
+  "name": "smartdry-node-red",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node-RED source for SmartDry ESP32 IoT project",
+  "scripts": {
+    "generate": "node generate_flows.js",
+    "check": "node -e \"JSON.parse(require('fs').readFileSync('flows.json','utf8')); console.log('flows.json ok')\""
+  },
+  "dependencies": {
+    "node-red": "^4.0.0",
+    "node-red-node-email": "^5.0.0"
+  },
+  "optionalDependencies": {
+    "node-red-contrib-aedes": "^0.15.0",
+    "node-red-contrib-firestore": "^1.1.6"
+  }
+}
+
